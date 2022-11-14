@@ -22,6 +22,12 @@ repositories {
         name "JourneyMap"
         url "https://jm.gserv.me/repository/maven-public/"
     }
+	maven {
+        url = "https://www.cursemaven.com"
+        content {
+            includeGroup "curse.maven"
+        }
+    }
 }
 
 dependencies {
@@ -46,6 +52,7 @@ dependencies {
     compileOnly fg.deobf("com.ferreusveritas.dynamictrees:DynamicTrees-${project.minecraftVersion}:${project.dynamicTreesVersion}")
     compileOnly fg.deobf("slimeknights.tconstruct:TConstruct:${project.minecraftVersion}-${project.tinkersConstructVersion}")
     compileOnly fg.deobf("slimeknights.mantle:Mantle:${project.minecraftVersion}-${project.mantleVersion}")
+	compileOnly fg.deobf("curse.maven:farmers-delight-398521:3765350")
     apiCompileOnly fg.deobf("com.resourcefulbees:ResourcefulBees:${project.minecraftVersion}-${project.resourceFullBeesVersion}")
     apiCompileOnly fg.deobf("slimeknights.mantle:Mantle:${project.minecraftVersion}-${project.mantleVersion}")
     apiCompileOnly fg.deobf("slimeknights.tconstruct:TConstruct:${project.minecraftVersion}-${project.tinkersConstructVersion}")
