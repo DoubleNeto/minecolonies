@@ -405,6 +405,7 @@ public class EntityAIWorkFarmer extends AbstractEntityAICrafting<JobFarmer, Buil
             || field.isNoPartOfField(world, position) 
             || (world.getBlockState(position.above()).getBlock() instanceof CropsBlock)
             || (world.getBlockState(position.above()).getBlock() instanceof BlockScarecrow)
+			|| (world.getBlockState(position.above()).getBlock() instanceof TomatoesBlock)
             || !world.getBlockState(position).getBlock().is(Tags.Blocks.DIRT)
         )
         {
@@ -659,6 +660,13 @@ public class EntityAIWorkFarmer extends AbstractEntityAICrafting<JobFarmer, Buil
         position = findHarvestableSurface(position);
         if (position != null)
         {
+			if (Compatibility.isFDInstalled())
+			{
+				worker.getCitizenExperienceHandler().addExperience(XP_PER_HARVEST);
+				harvestCropFD(position.above());
+				return true;
+			}
+			
             if (Compatibility.isPamsInstalled())
             {
                 worker.getCitizenExperienceHandler().addExperience(XP_PER_HARVEST);
@@ -719,6 +727,7 @@ public class EntityAIWorkFarmer extends AbstractEntityAICrafting<JobFarmer, Buil
             || (world.getBlockState(position.above()).getBlock() instanceof CropsBlock)
             || (world.getBlockState(position.above()).getBlock() instanceof StemBlock)
             || (world.getBlockState(position).getBlock() instanceof BlockScarecrow)
+			|| (world.getBlockState(position.above()).getBlock() instanceof TomatoesBlock)
             || !(world.getBlockState(position).getBlock() instanceof FarmlandBlock)
         )
         {
@@ -746,7 +755,7 @@ public class EntityAIWorkFarmer extends AbstractEntityAICrafting<JobFarmer, Buil
             return false;
         }
 
-        if (item.getItem() instanceof BlockItem && (((BlockItem) item.getItem()).getBlock() instanceof CropsBlock || ((BlockItem) item.getItem()).getBlock() instanceof StemBlock))
+        if (item.getItem() instanceof BlockItem && (((BlockItem) item.getItem()).getBlock() instanceof CropsBlock || ((BlockItem) item.getItem()).getBlock() instanceof TomatoesBlock || ((BlockItem) item.getItem()).getBlock() instanceof StemBlock))
         {
             @NotNull final Item seed = item.getItem();
             if ((seed == Items.MELON_SEEDS || seed == Items.PUMPKIN_SEEDS) && prevPos != null && !world.isEmptyBlock(prevPos.above()))
@@ -780,6 +789,38 @@ public class EntityAIWorkFarmer extends AbstractEntityAICrafting<JobFarmer, Buil
         if (block == Blocks.PUMPKIN || block == Blocks.MELON)
         {
             return position;
+        }
+		
+		if (isTomatoesBlock(block))
+        {
+            @NotNull TomatoesBlock crop = (TomatoesBlock) block;
+            if (crop.isMaxAge(state))
+            {
+                return position;
+            }
+            final int amountOfCompostInInv = InventoryUtils.getItemCountInItemHandler(worker.getInventoryCitizen(), this::isCompost);
+            if (amountOfCompostInInv == 0)
+            {
+                return null;
+            }
+
+            if (InventoryUtils.shrinkItemCountInItemHandler(worker.getInventoryCitizen(), this::isCompost))
+            {
+                Network.getNetwork().sendToPosition(new CompostParticleMessage(position.above()),
+                  new PacketDistributor.TargetPoint(position.getX(), position.getY(), position.getZ(), BLOCK_BREAK_SOUND_RANGE, world.dimension()));
+                crop.tick(state, (ServerWorld) world, position.above(), null);
+                state = world.getBlockState(position.above());
+                block = state.getBlock();
+                if (isTomatoesBlock(block))
+                {
+                    crop = (TomatoesBlock) block;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            return crop.isMaxAge(state) ? position : null;
         }
 
         if (isCrop(block))
@@ -825,6 +866,17 @@ public class EntityAIWorkFarmer extends AbstractEntityAICrafting<JobFarmer, Buil
     public boolean isCrop(final Block block)
     {
         return block instanceof CropsBlock;
+    }
+	
+	/**
+     * Check if a block is a tomato (from Farmer's Delight).
+     *
+     * @param block the block.
+     * @return true if so.
+     */
+    public boolean isTomatoesBlock(final Block block)
+    {
+        return block instanceof TomatoesBlock;
     }
 
     @Override
@@ -878,7 +930,13 @@ public class EntityAIWorkFarmer extends AbstractEntityAICrafting<JobFarmer, Buil
             }
             InventoryUtils.addItemStackToItemHandler(worker.getInventoryCitizen(), drop);
         }
-
+		
+		if (state.getBlock() instanceof TomatoesBlock)
+        {
+            final TomatoesBlock crops = (TomatoesBlock) state.getBlock();
+            world.setBlockAndUpdate(pos, crops.withAge(0));
+        }
+		
         if (state.getBlock() instanceof CropsBlock)
         {
             final CropsBlock crops = (CropsBlock) state.getBlock();
@@ -888,7 +946,19 @@ public class EntityAIWorkFarmer extends AbstractEntityAICrafting<JobFarmer, Buil
         this.incrementActionsDone();
         worker.decreaseSaturationForContinuousAction();
     }
-
+	
+	/**
+     * Harvest the crop (only if FD is installed).
+     *
+     * @param pos the position to harvest.
+     */
+	private void harvestCropFD(@NotNull final BlockPos pos)
+	{
+		final BlockState state = world.getBlockState(pos);
+		final TomatoesBlock crops = (TomatoesBlock) state.getBlock();
+		crops.use(state, world, pos, null, null, null);
+	}
+	
     /**
      * Get's the slot in which the hoe is in.
      *
