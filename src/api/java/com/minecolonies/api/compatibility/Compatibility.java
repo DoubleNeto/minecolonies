@@ -19,6 +19,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 import static com.minecolonies.api.util.constant.Constants.HARVESTCRAFTMODID;
+import static com.minecolonies.api.util.constant.Constants.FARMERSDELIGHTMODID;
 
 /**
  * This class is to store the methods that call the methods to check for miscellaneous compatibility problems.
@@ -152,6 +153,16 @@ public final class Compatibility
     public static boolean isPamsInstalled()
     {
         return ModList.get().isLoaded(HARVESTCRAFTMODID);
+    }
+	
+	/**
+     * Check if Farmer's Delight is installed.
+     *
+     * @return true if so.
+     */
+    public static boolean isFDInstalled()
+    {
+        return ModList.get().isLoaded(FARMERSDELIGHTMODID);
     }
 
     /**
